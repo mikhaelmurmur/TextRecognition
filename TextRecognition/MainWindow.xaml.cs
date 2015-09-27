@@ -60,8 +60,6 @@ namespace TextRecognition
             InitializeComponent();
         }
 
-
-
         private void GenerateText(object sender, RoutedEventArgs e)
         {
             Random random = new Random();
@@ -91,6 +89,15 @@ namespace TextRecognition
             string currentPath = AppDomain.CurrentDomain.BaseDirectory;
             itextGeneration.Source = new BitmapImage(new Uri(currentPath + numberOfSentece.ToString()+  "text.png"));
             numberOfSentece++;
+        }
+
+        private void crop(object sender, RoutedEventArgs e)
+        {
+            ImageSource source = itextGeneration.Source;
+            BitmapImage image = (BitmapImage)source;
+            image.SourceRect = new Int32Rect(120, 0, 100, 30);
+            CroppedBitmap result = new CroppedBitmap(image, new Int32Rect(120, 0, 100, 30));
+            cropped.Source = result;
         }
     }
 }

@@ -19,7 +19,7 @@
                    VerticalAlignment="Center"
                   />
         </Viewbox>
-        <Image Grid.Row="2" Stretch="None" Source="D:\Programming\TextRecognition\TextRecognition\TextRecognition\Images\B.png"/>
-
+        <Button Grid.Row="2" Click="crop"/>
+        <Image x:Name="cropped" Grid.Row="3"/>
     </Grid>
 </Window>
