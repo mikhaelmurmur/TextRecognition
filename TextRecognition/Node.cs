@@ -32,18 +32,9 @@ namespace TextRecognition
         public Node(Letters letter, string pathToImage)
         {
             currentLetter = letter;
-            try
-            {
-                letterImage = new BitmapImage(new Uri(pathToImage));
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
-            finally
-            {
-                letterImage = null;
-            }
+
+            letterImage = new BitmapImage(new Uri(pathToImage));
+
         }
 
 
