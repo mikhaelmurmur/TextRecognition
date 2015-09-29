@@ -39,16 +39,33 @@ namespace TextRecognition
             appPath+"space.png",
         };
 
-        static string appPath = AppDomain.CurrentDomain.BaseDirectory+"Images/";
+        static string appPath = AppDomain.CurrentDomain.BaseDirectory + "Images/";
 
         public static int GetAlphabetLength()
         {
-            return lettersPaths.Length;
+            return 4;// lettersPaths.Length;
         }
 
         public static string GetLetterPath(Letters letter)
         {
-            return lettersPaths[(int)letter];
+            return appPath + lettersPaths[(int)letter];
+        }
+
+        public static float GetProbability(Letters a, Letters b)
+        {
+            return 1.0f;
+        }
+
+        public static char GetLetter(Letters letter)
+        {
+            if ((int)letter == lettersPaths.Length - 1)
+            {
+                return ' ';
+            }
+            else
+            {
+                return (char)(97 + ((int)letter));
+            }
         }
     }
 }

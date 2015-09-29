@@ -20,6 +20,6 @@
                   />
         </Viewbox>
         <Button Grid.Row="2" Click="crop"/>
-        <Image x:Name="cropped" Grid.Row="3"/>
+        <TextBlock Grid.Row="3" x:Name="tbResult"/>
     </Grid>
 </Window>

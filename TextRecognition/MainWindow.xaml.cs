@@ -15,6 +15,8 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.IO;
 using System.Drawing;
+using System.Diagnostics;
+using XnaFan.ImageComparison;
 
 namespace TextRecognition
 {
@@ -23,7 +25,10 @@ namespace TextRecognition
     /// </summary>
     public partial class MainWindow : Window
     {
+        List<StructureItem> items = new List<StructureItem>();
         static int numberOfSentece = 0;
+        int totalWidth = 0;
+        #region images
         System.Drawing.Image[] letters = new System.Drawing.Image[]
         {
             System.Drawing.Image.FromFile("Images/a.png"),
@@ -54,7 +59,7 @@ namespace TextRecognition
             System.Drawing.Image.FromFile("Images/z.png"),
             System.Drawing.Image.FromFile("Images/space.png")
         };
-
+        #endregion
         public MainWindow()
         {
             InitializeComponent();
@@ -63,16 +68,16 @@ namespace TextRecognition
         private void GenerateText(object sender, RoutedEventArgs e)
         {
             Random random = new Random();
-            int length = random.Next(0, 100);
+            int length = random.Next(0, 20);
             List<System.Drawing.Image> sentence = new List<System.Drawing.Image>();
-            int totalWidth = 0;
-            for(int letterIndex = 0; letterIndex<length;letterIndex++)
+
+            for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
-                int letterValue = random.Next(0, 26);
+                int letterValue = random.Next(0, 3);
                 sentence.Add(letters[letterValue]);
                 totalWidth += letters[letterValue].Width;
             }
-            int totalHeight = 30;
+            int totalHeight = 26;
             Bitmap result = new Bitmap(totalWidth, totalHeight);
             result.SetResolution(300, 300);
             Graphics g = Graphics.FromImage(result);
@@ -84,20 +89,88 @@ namespace TextRecognition
                 g.DrawImage(sentence[letterIndex], new System.Drawing.Point(xPosition, 0));
             }
             g.Dispose();
-            result.Save(numberOfSentece.ToString()+ "text.png", System.Drawing.Imaging.ImageFormat.Png);
+            result.Save(numberOfSentece.ToString() + "text.png", System.Drawing.Imaging.ImageFormat.Png);
             result.Dispose();
             string currentPath = AppDomain.CurrentDomain.BaseDirectory;
-            itextGeneration.Source = new BitmapImage(new Uri(currentPath + numberOfSentece.ToString()+  "text.png"));
+            itextGeneration.Source = new BitmapImage(new Uri(string.Format("{0}{1}text.png", currentPath, numberOfSentece)));
             numberOfSentece++;
         }
 
         private void crop(object sender, RoutedEventArgs e)
         {
-            ImageSource source = itextGeneration.Source;
-            BitmapImage image = (BitmapImage)source;
-            image.SourceRect = new Int32Rect(120, 0, 100, 30);
-            CroppedBitmap result = new CroppedBitmap(image, new Int32Rect(120, 0, 100, 30));
-            cropped.Source = result;
+            FillStructure();
+            tbResult.Text = GetTextFromStructure(items);
         }
+
+        private string GetTextFromStructure(List<StructureItem> items)
+        {
+            string textRecongized = "";
+            foreach (StructureItem item in items)
+            {
+                item.GetMinimum();
+            }
+            float minim = items[items.Count - 1].GetMinimum();
+            textRecongized = items[items.Count - 1].GetMinimumWord();
+            return textRecongized;
+        }
+
+        private void FillStructure()
+        {
+            for (int structureIndex = 0; structureIndex < totalWidth; structureIndex++)
+            {
+                StructureItem item = new StructureItem();
+                items.Add(item);
+            }
+            for (int structureIndex = 0; structureIndex < totalWidth; structureIndex++)
+            {
+                for (int letterIndex = 0; letterIndex < Alphabet.GetAlphabetLength(); letterIndex++)
+                {
+                    BitmapImage originalLetter = items[structureIndex].nodes[letterIndex].GetImage();
+                    ImageSource source = itextGeneration.Source;
+                    BitmapImage image = (BitmapImage)source;
+                    if (image.PixelWidth - structureIndex >= originalLetter.PixelWidth)
+                    {
+                        CroppedBitmap croppedImage = new CroppedBitmap(image, new Int32Rect(structureIndex, 0, originalLetter.PixelWidth, originalLetter.PixelHeight));
+                        float difference = GetDifference(BitmapImage2Bitmap(originalLetter), BitmapImage2Bitmap(croppedImage));
+                        items[structureIndex].nodes[letterIndex].whereToGo = items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex];
+                        items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex].weightToCome = difference;
+                        items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex].fromWhereCame = items[structureIndex].nodes[letterIndex];
+                    }
+                }
+            }
+        }
+
+        private float GetDifference(Bitmap original, Bitmap compared)
+        {
+            float difference = .0f;
+
+            for (int y = 0; y < original.Height; y++)
+            {
+                for (int x = 0; x < original.Width; x++)
+                {
+                    difference += (float)Math.Abs(original.GetPixel(x, y).R - compared.GetPixel(x, y).R) / 255;
+                    difference += (float)Math.Abs(original.GetPixel(x, y).G - compared.GetPixel(x, y).G) / 255;
+                    difference += (float)Math.Abs(original.GetPixel(x, y).B - compared.GetPixel(x, y).B) / 255;
+                }
+            }
+
+            return 100 * difference / (original.Width * original.Height * 3);
+        }
+
+        private Bitmap BitmapImage2Bitmap(BitmapSource bitmapImage)
+        {
+            // BitmapImage bitmapImage = new BitmapImage(new Uri("../Images/test.png", UriKind.Relative));
+
+            using (MemoryStream outStream = new MemoryStream())
+            {
+                BitmapEncoder enc = new BmpBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bitmapImage));
+                enc.Save(outStream);
+                System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(outStream);
+
+                return new Bitmap(bitmap);
+            }
+        }
+
     }
 }
