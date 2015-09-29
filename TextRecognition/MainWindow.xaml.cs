@@ -81,7 +81,7 @@ namespace TextRecognition
             Bitmap result = new Bitmap(totalWidth, totalHeight);
             result.SetResolution(300, 300);
             Graphics g = Graphics.FromImage(result);
-            g.Clear(System.Drawing.Color.White);
+           // g.Clear(System.Drawing.Color.White);
             int xPosition = 0;
             for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
