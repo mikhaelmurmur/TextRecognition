@@ -68,9 +68,9 @@ namespace TextRecognition
         private void GenerateText(object sender, RoutedEventArgs e)
         {
             Random random = new Random();
-            int length = random.Next(0, 20);
+            int length = random.Next(1, 20);
             List<System.Drawing.Image> sentence = new List<System.Drawing.Image>();
-
+            Alphabet.Instance();
             for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
                 int letterValue = random.Next(0, 3);
@@ -81,7 +81,7 @@ namespace TextRecognition
             Bitmap result = new Bitmap(totalWidth, totalHeight);
             result.SetResolution(300, 300);
             Graphics g = Graphics.FromImage(result);
-           // g.Clear(System.Drawing.Color.White);
+            // g.Clear(System.Drawing.Color.White);
             int xPosition = 0;
             for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
@@ -105,10 +105,6 @@ namespace TextRecognition
         private string GetTextFromStructure(List<StructureItem> items)
         {
             string textRecongized = "";
-            foreach (StructureItem item in items)
-            {
-                item.GetMinimum();
-            }
             float minim = items[items.Count - 1].GetMinimum();
             textRecongized = items[items.Count - 1].GetMinimumWord();
             return textRecongized;
@@ -116,31 +112,36 @@ namespace TextRecognition
 
         private void FillStructure()
         {
+            ImageSource source = itextGeneration.Source;
+            BitmapImage image = (BitmapImage)source;
+            Bitmap toRecognize = BitmapImage2Bitmap(image);
             for (int structureIndex = 0; structureIndex < totalWidth; structureIndex++)
             {
-                StructureItem item = new StructureItem();
+                StructureItem item;
+                if (structureIndex == 0)
+                    item = new StructureItem(null);
+                else
+                    item = new StructureItem(items[structureIndex-1]);
                 items.Add(item);
             }
             for (int structureIndex = 0; structureIndex < totalWidth; structureIndex++)
             {
                 for (int letterIndex = 0; letterIndex < Alphabet.GetAlphabetLength(); letterIndex++)
                 {
-                    BitmapImage originalLetter = items[structureIndex].nodes[letterIndex].GetImage();
-                    ImageSource source = itextGeneration.Source;
-                    BitmapImage image = (BitmapImage)source;
-                    if (image.PixelWidth - structureIndex >= originalLetter.PixelWidth)
+                    Bitmap originalLetter = Alphabet.Instance().GetLetterImage(items[structureIndex].nodes[letterIndex].currentLetter);
+                    
+                    if (toRecognize.Width - structureIndex >= originalLetter.Width)
                     {
-                        CroppedBitmap croppedImage = new CroppedBitmap(image, new Int32Rect(structureIndex, 0, originalLetter.PixelWidth, originalLetter.PixelHeight));
-                        float difference = GetDifference(BitmapImage2Bitmap(originalLetter), BitmapImage2Bitmap(croppedImage));
-                        items[structureIndex].nodes[letterIndex].whereToGo = items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex];
-                        items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex].weightToCome = difference;
-                        items[structureIndex + originalLetter.PixelWidth - 1].nodes[letterIndex].fromWhereCame = items[structureIndex].nodes[letterIndex];
+                        float difference = GetDifference(originalLetter, toRecognize, structureIndex);
+                        items[structureIndex].nodes[letterIndex].whereToGo = items[structureIndex + originalLetter.Width - 1].nodes[letterIndex];
+                        items[structureIndex + originalLetter.Width - 1].nodes[letterIndex].weightToCome = difference;
+                        items[structureIndex + originalLetter.Width - 1].nodes[letterIndex].fromWhereCame = items[structureIndex].nodes[letterIndex];
                     }
                 }
             }
         }
 
-        private float GetDifference(Bitmap original, Bitmap compared)
+        private float GetDifference(Bitmap original, Bitmap compared, int horizontalShift)
         {
             float difference = .0f;
 
@@ -148,9 +149,9 @@ namespace TextRecognition
             {
                 for (int x = 0; x < original.Width; x++)
                 {
-                    difference += (float)Math.Abs(original.GetPixel(x, y).R - compared.GetPixel(x, y).R) / 255;
-                    difference += (float)Math.Abs(original.GetPixel(x, y).G - compared.GetPixel(x, y).G) / 255;
-                    difference += (float)Math.Abs(original.GetPixel(x, y).B - compared.GetPixel(x, y).B) / 255;
+                    difference += (float)Math.Abs(original.GetPixel(x, y).R - compared.GetPixel(x + horizontalShift, y).R) / 255;
+                    difference += (float)Math.Abs(original.GetPixel(x, y).G - compared.GetPixel(x + horizontalShift, y).G) / 255;
+                    difference += (float)Math.Abs(original.GetPixel(x, y).B - compared.GetPixel(x + horizontalShift, y).B) / 255;
                 }
             }
 

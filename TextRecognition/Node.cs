@@ -28,7 +28,7 @@ namespace TextRecognition
         {
             get; set;
         }
-        public float weightToCome = 0;
+        public float weightToCome = float.MaxValue;
         public Letters currentLetter { get; private set; }
         BitmapImage letterImage;
         public Node(Letters letter, string pathToImage, StructureItem owner)

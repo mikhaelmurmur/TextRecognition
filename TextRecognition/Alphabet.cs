@@ -1,13 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TextRecognition
 {
-    static class Alphabet
+    public class Alphabet
     {
+        static Alphabet instance;
+        public static Alphabet Instance()
+        {
+            if (instance == null)
+            {
+                instance = new Alphabet();
+            }
+            return instance;
+        }
+
+
+
+        Dictionary<Letters, Bitmap> lettersImages = new Dictionary<Letters, Bitmap>();
+
+        public Bitmap GetLetterImage(Letters letter)
+        {
+            return lettersImages[letter];
+        }
+
+        private Alphabet()
+        {
+            for (int letterIndex = 0; letterIndex < Alphabet.GetAlphabetLength(); letterIndex++)
+            {
+                lettersImages[(Letters)letterIndex] = new Bitmap(GetLetterPath((Letters)letterIndex));
+            }
+        }
+
+
         static string[] lettersPaths = new string[]
         {
             appPath+"a.png",
