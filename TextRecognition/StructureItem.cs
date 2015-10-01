@@ -19,7 +19,7 @@ namespace TextRecognition
             }
             for (int letterIndex = 0; letterIndex < Alphabet.GetAlphabetLength(); letterIndex++)
             {
-                Node letter = new Node((Letters)letterIndex, Alphabet.GetLetterPath((Letters)letterIndex), this);
+                Node letter = new Node((Letters)letterIndex, this);
                 nodes.Add(letter);
             }
         }
@@ -53,10 +53,8 @@ namespace TextRecognition
                     float prevMinimum = 0;
                     if (node.fromWhereCame.owner.previous != null)
                         prevMinimum = node.fromWhereCame.owner.previous.GetMinimum();
-                    
+
                     value = (prevMinimum + node.weightToCome);
-                    //if (node.owner.minimumLetter != null)
-                    //    value /= Alphabet.GetProbability(node.currentLetter, node.owner.minimumLetter.currentLetter);
 
                     if (minimum == null)
                     {
@@ -66,13 +64,12 @@ namespace TextRecognition
                     else
                     {
                         if (minimum > value)
-                        //if (((minimum > value) && (value != 0)) || (minimum == 0 && minimumLetter == null))
                         {
                             minimum = value;
                             minimumLetter = node;
                         }
                     }
-                    
+
                 }
             }
             if (minimum == null)
@@ -95,7 +92,7 @@ namespace TextRecognition
             }
             else
             {
-                if (minimumLetter != null && minimumLetter.fromWhereCame != null )
+                if (minimumLetter != null && minimumLetter.fromWhereCame != null)
                 {
                     recognizedText = recognizedText + minimumLetter.fromWhereCame.owner.GetMinimumWord();
                     recognizedText = recognizedText + Alphabet.GetLetter(minimumLetter.currentLetter);

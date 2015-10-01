@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Drawing;
+using XnaFan.ImageComparison;
+using System.Windows.Interop;
 
 namespace TextRecognition
 {
@@ -16,7 +17,8 @@ namespace TextRecognition
         private List<StructureItem> items = new List<StructureItem>();
         private static int numberOfSentece = 0;
         private int totalWidth = 0;
-
+        byte[] pixels;
+        int stride = 0;
         private System.Drawing.Image[] letters = new System.Drawing.Image[]
         {
             System.Drawing.Image.FromFile("Images/a.png"),
@@ -55,54 +57,66 @@ namespace TextRecognition
 
         private void GenerateText(object sender, RoutedEventArgs e)
         {
-            var random = new Random();
-            var length = random.Next(1, 100);
-            var sentence = new List<System.Drawing.Image>();
+            Random random = new Random();
+            int length = random.Next(1, 30);
+            length = 100;
+            List<System.Drawing.Image> sentence = new List<System.Drawing.Image>();
             Alphabet.Instance();
-            for (var letterIndex = 0; letterIndex < length; letterIndex++)
+            for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
-                var letterValue = random.Next(0, Alphabet.GetAlphabetLength()-1);
+                int letterValue = random.Next(0, Alphabet.GetAlphabetLength() - 1);
                 sentence.Add(letters[letterValue]);
                 totalWidth += letters[letterValue].Width;
             }
-            var totalHeight = 26;
-            var result = new Bitmap(totalWidth, totalHeight);
+            int totalHeight = 26;
+            Bitmap result = new Bitmap(totalWidth, totalHeight);
             result.SetResolution(300, 300);
-            var g = Graphics.FromImage(result);
+            Graphics g = Graphics.FromImage(result);
 
-            var xPosition = 0;
-            for (var letterIndex = 0; letterIndex < length; letterIndex++)
+            int xPosition = 0;
+            for (int letterIndex = 0; letterIndex < length; letterIndex++)
             {
                 xPosition += letterIndex == 0 ? 0 : sentence[letterIndex - 1].Width;
                 g.DrawImage(sentence[letterIndex], new System.Drawing.Point(xPosition, 0));
             }
             g.Dispose();
-            result.Save(numberOfSentece.ToString() + "text.png", System.Drawing.Imaging.ImageFormat.Png);
-            result.Dispose();
-            var currentPath = AppDomain.CurrentDomain.BaseDirectory;
-            itextGeneration.Source = new BitmapImage(new Uri(string.Format("{0}{1}text.png", currentPath, numberOfSentece)));
+            result.Save(numberOfSentece.ToString() + "text.gif", System.Drawing.Imaging.ImageFormat.Gif);
+
+            string currentPath = AppDomain.CurrentDomain.BaseDirectory;
+            itextGeneration.Source = new BitmapImage(new Uri(currentPath + numberOfSentece.ToString() + "text.gif"));
             numberOfSentece++;
-            FillStructure();
+            BitmapImage textImage = (BitmapImage)itextGeneration.Source;
+            int pxl = textImage.Format.BitsPerPixel;
+            pixels = Alphabet.Instance().BitmapSourceToArray(textImage, ref stride);
+            
         }
 
         private void crop(object sender, RoutedEventArgs e)
         {
-           // FillStructure();
+            FillStructure();
             tbResult.Text = GetTextFromStructure(items);
         }
 
         private string GetTextFromStructure(List<StructureItem> items)
         {
-            var textRecongized = string.Empty;
+            string textRecongized = string.Empty;
             items[items.Count - 1].GetMinimum();
             textRecongized = items[items.Count - 1].GetMinimumWord();
             return textRecongized;
         }
 
+
+        void BenchmarkAddTime(string time)
+        {
+            string text = tbBenchmark.Text;
+            text = text + time + "\n";
+            tbBenchmark.Text = text;
+        }
+
         private void FillStructure()
         {
             var source = itextGeneration.Source;
-            var image = (BitmapImage)source;
+            BitmapImage image = (BitmapImage)source;
             var toRecognize = BitmapImage2Bitmap(image);
             for (var structureIndex = 0; structureIndex < totalWidth; structureIndex++)
             {
@@ -122,35 +136,34 @@ namespace TextRecognition
             {
                 for (int letterIndex = 0; letterIndex < Alphabet.GetAlphabetLength(); letterIndex++)
                 {
-                    Bitmap originalLetter = Alphabet.Instance().GetLetterImage(items[structureIndex].nodes[letterIndex].currentLetter);
-
-                    if (toRecognize.Width - structureIndex >= originalLetter.Width)
+                    byte[] originalLetter = Alphabet.Instance().GetLetterImage(items[structureIndex].nodes[letterIndex].currentLetter);
+                    int letterStride = Alphabet.Instance().GetWidthOfLetter(items[structureIndex].nodes[letterIndex].currentLetter);
+                    if (letterStride/8 <= stride/8 - structureIndex)
                     {
-                        float difference = GetDifference(originalLetter, toRecognize, structureIndex);
-                        items[structureIndex].nodes[letterIndex].whereToGo = items[structureIndex + originalLetter.Width - 1].nodes[letterIndex];
-                        items[structureIndex + originalLetter.Width - 1].nodes[letterIndex].weightToCome = difference;
-                        items[structureIndex + originalLetter.Width - 1].nodes[letterIndex].fromWhereCame = items[structureIndex].nodes[letterIndex];
+                        float difference = GetDifference(originalLetter, letterStride, structureIndex);
+                        items[structureIndex + letterStride/8 - 1].nodes[letterIndex].weightToCome = difference;
+                        items[structureIndex + letterStride/8 - 1].nodes[letterIndex].fromWhereCame = items[structureIndex].nodes[letterIndex];
                     }
                 }
             }
         }
 
-        private float GetDifference(Bitmap original, Bitmap compared, int horizontalShift)
+        private float GetDifference(byte[] original, int width, int horizontalShift)
         {
-            var difference = .0f;
-
-            for (var y = 0; y < original.Height; y++)
+            float difference = .0f;
+            for (int y = 0; y < original.Length / width; y++)
             {
-                for (var x = 0; x < original.Width; x++)
+                for (int x = 0; x < width/8; x++)
                 {
-                    difference += (float)Math.Abs(original.GetPixel(x, y).R - compared.GetPixel(x + horizontalShift, y).R) / 255;
-                    difference += (float)Math.Abs(original.GetPixel(x, y).G - compared.GetPixel(x + horizontalShift, y).G) / 255;
-                    difference += (float)Math.Abs(original.GetPixel(x, y).B - compared.GetPixel(x + horizontalShift, y).B) / 255;
+                    difference += (float)(Math.Abs(original[y * (width) + x] - pixels[y * stride +  (x + horizontalShift)]) )/ 255;
+                    //difference += (float)(Math.Abs(original[y * (width) + x + 1] - pixels[y * stride + 4 * (x + horizontalShift) + 1]) / 255);
+                    //difference += (float)(Math.Abs(original[y * (width) + x + 2] - pixels[y * stride + 4 * (x + horizontalShift) + 2]) / 255);
                 }
             }
 
-            return 100 * difference / (original.Width * original.Height * 3);
+            return 100 * difference / (original.Length/8);
         }
+
 
         private Bitmap BitmapImage2Bitmap(BitmapSource bitmapImage)
         {
@@ -159,7 +172,7 @@ namespace TextRecognition
                 BitmapEncoder enc = new BmpBitmapEncoder();
                 enc.Frames.Add(BitmapFrame.Create(bitmapImage));
                 enc.Save(outStream);
-                var bitmap = new System.Drawing.Bitmap(outStream);
+                Bitmap bitmap = new System.Drawing.Bitmap(outStream);
 
                 return new Bitmap(bitmap);
             }

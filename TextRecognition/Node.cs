@@ -24,24 +24,16 @@ namespace TextRecognition
         }
 
 
-        public Node whereToGo
-        {
-            get; set;
-        }
+
         public float weightToCome = float.MaxValue;
         public Letters currentLetter { get; private set; }
-        BitmapImage letterImage;
-        public Node(Letters letter, string pathToImage, StructureItem owner)
+        public Node(Letters letter, StructureItem owner)
         {
             currentLetter = letter;
             this.owner = owner;
-            letterImage = new BitmapImage(new Uri(pathToImage));
-
+            
         }
 
-        public BitmapImage GetImage()
-        {
-            return letterImage;
-        }
+        
     }
 }
